@@ -50,7 +50,7 @@ export default function FavoritesScreen() {
         ) : (
           <View style={styles.videoContainer} >
             <Ionicons name="videocam-outline" size={45} color="#8B5CF6" />
-            <Text style={styles.videoText}> Video content </Text>
+            <Text style={styles.videoText}> Conteúdo de vídeo </Text>
           </View>
         )}
         <View style={styles.cardContent}>
@@ -65,7 +65,7 @@ export default function FavoritesScreen() {
           <Text style={styles.description} numberOfLines={4} > {item.explanation} </Text>
           <TouchableOpacity style={styles.removeButton} onPress={() => handleRemove(item)} activeOpacity={0.7} >
             <Ionicons name="heart" size={19} color="#FF6B8A" />
-            <Text style={styles.removeText}>  Remove Favorite </Text>
+            <Text style={styles.removeText}>  Remover Favorito </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -76,7 +76,7 @@ export default function FavoritesScreen() {
     return (
       <View style={styles.loadingContainer} >
         <ActivityIndicator size="large" color="#8B5CF6" />
-        <Text style={styles.loadingText}>  Loading favorites... </Text>
+        <Text style={styles.loadingText}>  Carregando Favoritos... </Text>
       </View>
     );
   }
@@ -88,8 +88,8 @@ export default function FavoritesScreen() {
           <Ionicons name="heart" size={27} color="#FF6B8A" />
         </View>
         <View style={styles.headerTextContainer}>
-          <Text style={styles.title}>  My Favorites </Text>
-          <Text style={styles.subtitle}> Your discoveries across the universe </Text>
+          <Text style={styles.title}>  Meus Favoritos </Text>
+          <Text style={styles.subtitle}> Suas Descobertas pelo universo </Text>
         </View>
       </View>
       {favorites.length === 0 ? (<View style={styles.emptyContainer} >
@@ -97,7 +97,7 @@ export default function FavoritesScreen() {
           <Ionicons name="planet-outline" size={58} color="#8B5CF6" />
         </View>
         <Text style={styles.emptyTitle}> No favorites yet</Text>
-        <Text style={styles.emptyText}> Explore NASA images and tap the heart to save your favorites.</Text>
+        <Text style={styles.emptyText}> Explore Imagens da NASA e clice nos corações para salvar seus favoritos.</Text>
       </View>
       ) : (
         <FlatList data={favorites} keyExtractor={(item) => item.date} renderItem={renderFavorite} showsVerticalScrollIndicator={false}

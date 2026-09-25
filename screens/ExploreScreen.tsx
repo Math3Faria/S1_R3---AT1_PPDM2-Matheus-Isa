@@ -60,13 +60,13 @@ export default function ExploreScreen() {
                     </View>
 
                     <View>
-                        <Text style={styles.title}>Explore the Universe</Text>
-                        <Text style={styles.subtitle}>Discover the universe through time</Text>
+                        <Text style={styles.title}>Explore o Universo</Text>
+                        <Text style={styles.subtitle}>Descubra o universo através do tempo</Text>
                     </View>
                 </View>
 
                 <View style={styles.searchCard}>
-                    <Text style={styles.label}>Choose a date</Text>
+                    <Text style={styles.label}>Escolha uma data</Text>
                     <TouchableOpacity style={styles.input} onPress={() => setShowPicker(true)}>
                         <Ionicons name="calendar-outline" size={21} color="#8B5CF6" />
                         <Text style={[styles.inputText, !date && styles.placeholder]}> {date ? formatDate(date) : "Select a date"} </Text>
@@ -75,7 +75,7 @@ export default function ExploreScreen() {
 
                     <TouchableOpacity style={styles.exploreButton} onPress={handleExplore}>
                         <Ionicons name="search-outline" size={20} color="#FFF" />
-                        <Text style={styles.exploreButtonText}>Explore</Text>
+                        <Text style={styles.exploreButtonText}>Explorar</Text>
                     </TouchableOpacity>
                 </View>
 
@@ -109,14 +109,14 @@ export default function ExploreScreen() {
                 {loading && (
                     <View style={styles.loading}>
                         <ActivityIndicator size="large" color="#8B5CF6" />
-                        <Text style={styles.loadingText}>Exploring the universe...</Text>
+                        <Text style={styles.loadingText}>Explorando o universo...</Text>
                     </View>
                 )}
 
                 {apod && !loading && (
                     <View style={styles.card}>
                         <View style={styles.cardHeader}>
-                            <Text style={styles.resultLabel}>ASTRONOMY PICTURE OF THE DAY</Text>
+                            <Text style={styles.resultLabel}>IMAGEM ASTRONÔMICA DO DIA</Text>
                             <Text style={styles.date}>{formatDate(apod.date)}</Text>
                         </View>
 
@@ -128,7 +128,7 @@ export default function ExploreScreen() {
                                 <Text style={styles.videoTitle}>NASA Video</Text>
 
                                 <TouchableOpacity style={styles.watchButton} onPress={handleWatchVideo}>
-                                    <Text style={styles.watchButtonText}>Watch Video</Text>
+                                    <Text style={styles.watchButtonText}>Assistir Vídeo</Text>
                                 </TouchableOpacity>
                             </View>
                         )}
