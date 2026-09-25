@@ -1,19 +1,51 @@
+
 import React, { useEffect, useState } from "react"
 import {ActivityIndicator,Image,ScrollView,StyleSheet,Text,TouchableOpacity,View} from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 import Ionicons from "@expo/vector-icons/Ionicons"
-
-const NASA_API_KEY = "DEMO_KEY"
+import { getApodByDate, Apod } from "../services/nasaApi"
 
 export default function HomeScreen({ navigation }: any) {
-    const [apod, setApod] = useState<any>(null)
+    const [apod, setApod] = useState<Apod | null>(null)
+    const [loading, setLoading] = useState(true)
 
     useEffect(() => {
-        fetch(`https://api.nasa.gov/planetary/apod?api_key=${NASA_API_KEY}`)
-            .then(res => res.json())
-            .then(setApod)
-            .catch(() => {})
+        carregarImagemDoDia()
     }, [])
+
+    async function carregarImagemDoDia() {
+        try {
+            setLoading(true)
+
+            const hoje = new Date()
+            const ano = hoje.getFullYear()
+            const mes = String(hoje.getMonth() + 1).padStart(2, "0")
+            const dia = String(hoje.getDate()).padStart(2, "0")
+            const data = `${ano}-${mes}-${dia}`
+
+            const resultado = await getApodByDate(data)
+
+            setApod(resultado)
+        } catch (error) {
+            console.log("Erro ao carregar APOD:", error)
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    function formatarData(data: string) {
+        if (!data) {
+            return ""
+        }
+
+        const partes = data.split("-")
+
+        if (partes.length !== 3) {
+            return data
+        }
+
+        return `${partes[2]}/${partes[1]}/${partes[0]}`
+    }
 
     return (
         <SafeAreaView style={styles.container}>
@@ -50,11 +82,26 @@ export default function HomeScreen({ navigation }: any) {
                 <View style={styles.today}>
                     <Text style={styles.section}>IMAGEM DO DIA</Text>
 
-                    {!apod ? (
+                    {loading ? (
                         <ActivityIndicator color="#A78BFA" />
+                    ) : !apod ? (
+                        <View style={styles.errorContainer}>
+                            <Text style={styles.errorText}>
+                                Não foi possível carregar a imagem do dia.
+                            </Text>
+
+                            <TouchableOpacity
+                                style={styles.retryButton}
+                                onPress={carregarImagemDoDia}
+                            >
+                                <Text style={styles.retryText}>
+                                    Tentar novamente
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
                     ) : (
                         <View style={styles.card}>
-                            {apod.media_type === "image" && (
+                            {apod.media_type === "image" && apod.url && (
                                 <Image
                                     source={{ uri: apod.url }}
                                     style={styles.image}
@@ -63,7 +110,7 @@ export default function HomeScreen({ navigation }: any) {
 
                             <View style={styles.cardContent}>
                                 <Text style={styles.date}>
-                                    {apod.date.split("-").reverse().join("/")}
+                                    {formatarData(apod.date)}
                                 </Text>
 
                                 <Text style={styles.cardTitle}>
@@ -161,5 +208,28 @@ const styles = StyleSheet.create({
         fontSize: 18,
         fontWeight: "700",
         marginTop: 5
+    },
+    errorContainer: {
+        backgroundColor: "#12162A",
+        borderRadius: 15,
+        padding: 20,
+        alignItems: "center"
+    },
+    errorText: {
+        color: "#9CA3AF",
+        fontSize: 14,
+        textAlign: "center"
+    },
+    retryButton: {
+        backgroundColor: "#6D28D9",
+        paddingHorizontal: 20,
+        paddingVertical: 10,
+        borderRadius: 10,
+        marginTop: 15
+    },
+    retryText: {
+        color: "#FFF",
+        fontWeight: "700"
     }
 })
+
