@@ -1,115 +1,77 @@
 import React, { useEffect, useState } from "react"
-import { ActivityIndicator, Image, Linking, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from "react-native"
+import {ActivityIndicator,Image,ScrollView,StyleSheet,Text,TouchableOpacity,View} from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 import Ionicons from "@expo/vector-icons/Ionicons"
-import { isFavorite, toggleFavorite } from "../storage/favorites"
-
-type Apod = {
-    title: string
-    date: string
-    explanation: string
-    url: string
-    hdurl?: string
-    media_type: string
-}
 
 const NASA_API_KEY = "DEMO_KEY"
 
-export default function HomeScreen() {
-    const [apod, setApod] = useState<Apod | null>(null)
-    const [loading, setLoading] = useState(true)
-    const [error, setError] = useState(false)
-    const [favorito, setFavorito] = useState(false)
-
-    async function buscarApod() {
-        try {
-            setLoading(true)
-            setError(false)
-            const response = await fetch(`https://api.nasa.gov/planetary/apod?api_key=${NASA_API_KEY}`)
-            if (!response.ok) throw new Error()
-            const data = await response.json()
-            setApod(data)
-            setFavorito(await isFavorite(data.date))
-        } catch {
-            setError(true)
-        } finally {
-            setLoading(false)
-        }
-    }
+export default function HomeScreen({ navigation }: any) {
+    const [apod, setApod] = useState<any>(null)
 
     useEffect(() => {
-        buscarApod()
+        fetch(`https://api.nasa.gov/planetary/apod?api_key=${NASA_API_KEY}`)
+            .then(res => res.json())
+            .then(setApod)
+            .catch(() => {})
     }, [])
-
-    async function handleFavorite() {
-        if (!apod) return
-        const newStatus = await toggleFavorite(apod)
-        setFavorito(newStatus)
-    }
-
-    function formatarData(data: string) {
-        const [ano, mes, dia] = data.split("-")
-        return `${dia}/${mes}/${ano}`
-    }
-
-    if (loading) {
-        return (
-            <SafeAreaView style={styles.center}>
-                <ActivityIndicator size="large" color="#FFFFFF" />
-                <Text style={styles.texto}>Carregando...</Text>
-            </SafeAreaView>
-        )
-    }
-
-    if (error || !apod) {
-        return (
-            <SafeAreaView style={styles.center}>
-                <Text style={styles.texto}>Erro ao carregar a imagem.</Text>
-                <TouchableOpacity style={styles.botao} onPress={buscarApod}>
-                    <Text style={styles.botaoTexto}>Tentar novamente</Text>
-                </TouchableOpacity>
-            </SafeAreaView>
-        )
-    }
 
     return (
         <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="light-content" />
             <ScrollView showsVerticalScrollIndicator={false}>
-                <View style={styles.header}>
-                    <Text style={styles.logo}>NASA Explorer</Text>
-                    <Text style={styles.subtitulo}>Imagem astronômica do dia</Text>
+                <View style={styles.intro}>
+                    <Ionicons name="planet-outline" size={40} color="#A78BFA" />
+
+                    <Text style={styles.logo}>NASA EXPLORER</Text>
+
+                    <Text style={styles.title}>
+                        Explore o universo{"\n"}todos os dias.
+                    </Text>
+
+                    <Text style={styles.description}>
+                        Descubra imagens astronômicas da NASA,
+                        conheça suas histórias e salve suas favoritas.
+                    </Text>
+
+                    <TouchableOpacity
+                        style={styles.button}
+                        onPress={() => navigation.navigate("Explore")}
+                    >
+                        <Ionicons name="rocket-outline" size={20} color="#FFF" />
+                        <Text style={styles.buttonText}>Começar a explorar</Text>
+                    </TouchableOpacity>
+
+                    <View style={styles.features}>
+                        <Text style={styles.feature}>🔭 Explore imagens por data</Text>
+                        <Text style={styles.feature}>♡  Salve suas favoritas</Text>
+                        <Text style={styles.feature}>🌌 Descubra o universo</Text>
+                    </View>
                 </View>
 
-                <View style={styles.card}>
-                    {apod.media_type === "image" ? (
-                        <Image source={{ uri: apod.hdurl || apod.url }} style={styles.image} />
+                <View style={styles.today}>
+                    <Text style={styles.section}>IMAGEM DO DIA</Text>
+
+                    {!apod ? (
+                        <ActivityIndicator color="#A78BFA" />
                     ) : (
-                        <TouchableOpacity style={styles.video} onPress={() => Linking.openURL(apod.url)}>
-                            <Text style={styles.texto}>Assistir vídeo</Text>
-                        </TouchableOpacity>
+                        <View style={styles.card}>
+                            {apod.media_type === "image" && (
+                                <Image
+                                    source={{ uri: apod.url }}
+                                    style={styles.image}
+                                />
+                            )}
+
+                            <View style={styles.cardContent}>
+                                <Text style={styles.date}>
+                                    {apod.date.split("-").reverse().join("/")}
+                                </Text>
+
+                                <Text style={styles.cardTitle}>
+                                    {apod.title}
+                                </Text>
+                            </View>
+                        </View>
                     )}
-
-                    <View style={styles.content}>
-                        <Text style={styles.data}>{formatarData(apod.date)}</Text>
-                        <Text style={styles.title}>{apod.title}</Text>
-                        <Text style={styles.description}>{apod.explanation}</Text>
-
-                        <TouchableOpacity
-                            style={[styles.favoriteButton, favorito && styles.favoriteButtonActive]}
-                            onPress={handleFavorite}
-                            activeOpacity={0.8}
-                        >
-                            <Ionicons
-                                name={favorito ? "heart" : "heart-outline"}
-                                size={22}
-                                color={favorito ? "#FF6B8A" : "#A78BFA"}
-                            />
-                            <Text style={[styles.favoriteText, favorito && styles.favoriteTextActive]}>
-                                {favorito ? "Remove from Favorites" : "Add to Favorites"}
-                            </Text>
-                        </TouchableOpacity>
-                    </View>
                 </View>
             </ScrollView>
         </SafeAreaView>
@@ -121,93 +83,83 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: "#080B18"
     },
-    center: {
-        flex: 1,
-        backgroundColor: "#080B18",
-        justifyContent: "center",
-        alignItems: "center"
-    },
-    header: {
-        padding: 20
+    intro: {
+        padding: 25,
+        paddingTop: 35
     },
     logo: {
-        color: "#FFFFFF",
-        fontSize: 24,
-        fontWeight: "bold"
-    },
-    subtitulo: {
-        color: "#999999",
-        marginTop: 5
-    },
-    card: {
-        backgroundColor: "#12162A",
-        margin: 15,
-        borderRadius: 15,
-        overflow: "hidden"
-    },
-    image: {
-        width: "100%",
-        height: 280
-    },
-    video: {
-        height: 250,
-        justifyContent: "center",
-        alignItems: "center"
-    },
-    content: {
-        padding: 18
-    },
-    data: {
-        color: "#999999",
-        marginBottom: 8
+        color: "#A78BFA",
+        fontSize: 14,
+        fontWeight: "700",
+        letterSpacing: 2,
+        marginTop: 12
     },
     title: {
-        color: "#FFFFFF",
-        fontSize: 21,
+        color: "#FFF",
+        fontSize: 32,
         fontWeight: "bold",
-        marginBottom: 15
+        lineHeight: 40,
+        marginTop: 14
     },
     description: {
-        color: "#CCCCCC",
-        fontSize: 14,
-        lineHeight: 21
+        color: "#9CA3AF",
+        fontSize: 15,
+        lineHeight: 22,
+        marginTop: 14
     },
-    texto: {
-        color: "#FFFFFF",
-        marginTop: 10
-    },
-    botao: {
-        backgroundColor: "#FFFFFF",
-        padding: 14,
-        borderRadius: 10,
-        alignItems: "center",
-        marginTop: 20
-    },
-    botaoTexto: {
-        color: "#080B18",
-        fontWeight: "bold"
-    },
-    favoriteButton: {
+    button: {
         height: 52,
+        backgroundColor: "#6D28D9",
         borderRadius: 14,
-        borderWidth: 1,
-        borderColor: "#6D28D9",
-        marginTop: 20,
+        marginTop: 25,
         flexDirection: "row",
         justifyContent: "center",
         alignItems: "center",
         gap: 8
     },
-    favoriteButtonActive: {
-        backgroundColor: "#29143A",
-        borderColor: "#EF476F"
-    },
-    favoriteText: {
-        color: "#A78BFA",
-        fontSize: 15,
+    buttonText: {
+        color: "#FFF",
         fontWeight: "700"
     },
-    favoriteTextActive: {
-        color: "#FF7A9C"
+    features: {
+        marginTop: 28,
+        gap: 12
+    },
+    feature: {
+        color: "#B5B8C5",
+        fontSize: 14
+    },
+    today: {
+        padding: 20,
+        paddingTop: 15
+    },
+    section: {
+        color: "#A78BFA",
+        fontSize: 13,
+        fontWeight: "700",
+        letterSpacing: 1.5,
+        marginBottom: 14
+    },
+    card: {
+        backgroundColor: "#12162A",
+        borderRadius: 15,
+        overflow: "hidden"
+    },
+    image: {
+        width: "100%",
+        height: 210
+    },
+    cardContent: {
+        padding: 16
+    },
+    date: {
+        color: "#8B8FA3",
+        fontSize: 13
+    },
+    cardTitle: {
+        color: "#FFF",
+        fontSize: 18,
+        fontWeight: "700",
+        marginTop: 5
     }
 })
