@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react"
 import { ActivityIndicator, Image, Linking, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
+import Ionicons from "@expo/vector-icons/Ionicons"
+import { isFavorite, toggleFavorite } from "../storage/favorites"
 
 type Apod = {
     title: string
@@ -27,6 +29,7 @@ export default function HomeScreen() {
             if (!response.ok) throw new Error()
             const data = await response.json()
             setApod(data)
+            setFavorito(await isFavorite(data.date))
         } catch {
             setError(true)
         } finally {
@@ -37,6 +40,12 @@ export default function HomeScreen() {
     useEffect(() => {
         buscarApod()
     }, [])
+
+    async function handleFavorite() {
+        if (!apod) return
+        const newStatus = await toggleFavorite(apod)
+        setFavorito(newStatus)
+    }
 
     function formatarData(data: string) {
         const [ano, mes, dia] = data.split("-")
@@ -86,8 +95,19 @@ export default function HomeScreen() {
                         <Text style={styles.title}>{apod.title}</Text>
                         <Text style={styles.description}>{apod.explanation}</Text>
 
-                        <TouchableOpacity style={[styles.botao, favorito && styles.favoritado]} onPress={() => setFavorito(!favorito)}>
-                            <Text style={styles.botaoTexto}>{favorito ? "Favoritado" : "Favoritar"}</Text>
+                        <TouchableOpacity
+                            style={[styles.favoriteButton, favorito && styles.favoriteButtonActive]}
+                            onPress={handleFavorite}
+                            activeOpacity={0.8}
+                        >
+                            <Ionicons
+                                name={favorito ? "heart" : "heart-outline"}
+                                size={22}
+                                color={favorito ? "#FF6B8A" : "#A78BFA"}
+                            />
+                            <Text style={[styles.favoriteText, favorito && styles.favoriteTextActive]}>
+                                {favorito ? "Remove from Favorites" : "Add to Favorites"}
+                            </Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -163,11 +183,31 @@ const styles = StyleSheet.create({
         alignItems: "center",
         marginTop: 20
     },
-    favoritado: {
-        backgroundColor: "#5968E9"
-    },
     botaoTexto: {
         color: "#080B18",
         fontWeight: "bold"
+    },
+    favoriteButton: {
+        height: 52,
+        borderRadius: 14,
+        borderWidth: 1,
+        borderColor: "#6D28D9",
+        marginTop: 20,
+        flexDirection: "row",
+        justifyContent: "center",
+        alignItems: "center",
+        gap: 8
+    },
+    favoriteButtonActive: {
+        backgroundColor: "#29143A",
+        borderColor: "#EF476F"
+    },
+    favoriteText: {
+        color: "#A78BFA",
+        fontSize: 15,
+        fontWeight: "700"
+    },
+    favoriteTextActive: {
+        color: "#FF7A9C"
     }
 })

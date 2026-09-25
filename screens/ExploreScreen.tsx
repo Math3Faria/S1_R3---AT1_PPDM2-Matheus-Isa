@@ -12,6 +12,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Linking,
+  Modal,
 } from "react-native";
 
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -31,6 +32,78 @@ export default function ExploreScreen() {
   const [apod, setApod] = useState<Apod | null>(null);
   const [loading, setLoading] = useState(false);
   const [favorite, setFavorite] = useState(false);
+  const [calendarVisible, setCalendarVisible] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState(() => {
+    const today = new Date();
+    return new Date(today.getFullYear(), today.getMonth(), 1);
+  });
+
+  const monthNames = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December",
+  ];
+
+  function formatDateForApi(year: number, month: number, day: number) {
+    return `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  }
+
+  function openCalendar() {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      const [year, month] = date.split("-").map(Number);
+      setCalendarMonth(new Date(year, month - 1, 1));
+    }
+    setCalendarVisible(true);
+  }
+
+  function selectCalendarDay(day: number) {
+    const year = calendarMonth.getFullYear();
+    const month = calendarMonth.getMonth();
+    setDate(formatDateForApi(year, month, day));
+    setCalendarVisible(false);
+  }
+
+  function changeMonth(offset: number) {
+    setCalendarMonth(
+      new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + offset, 1)
+    );
+  }
+
+  function renderCalendarDays() {
+    const year = calendarMonth.getFullYear();
+    const month = calendarMonth.getMonth();
+    const firstWeekday = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const today = new Date();
+    const cells = [];
+
+    for (let i = 0; i < firstWeekday; i++) {
+      cells.push(<View key={`empty-${i}`} style={styles.calendarDay} />);
+    }
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      const current = new Date(year, month, day);
+      const future = current > new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const beforeApod = current < new Date(1995, 5, 16);
+      const disabled = future || beforeApod;
+      const value = formatDateForApi(year, month, day);
+      const selected = date === value;
+
+      cells.push(
+        <TouchableOpacity
+          key={day}
+          style={[styles.calendarDay, selected && styles.calendarDaySelected]}
+          onPress={() => selectCalendarDay(day)}
+          disabled={disabled}
+        >
+          <Text style={[styles.calendarDayText, disabled && styles.calendarDayDisabled, selected && styles.calendarDayTextSelected]}>
+            {day}
+          </Text>
+        </TouchableOpacity>
+      );
+    }
+
+    return cells;
+  }
 
   async function handleExplore() {
     if (!date.trim()) {
@@ -160,24 +233,23 @@ export default function ExploreScreen() {
             Choose a date
           </Text>
 
-          <View style={styles.inputContainer}>
+          <TouchableOpacity
+            style={styles.inputContainer}
+            onPress={openCalendar}
+            activeOpacity={0.8}
+          >
             <Ionicons
               name="calendar-outline"
               size={21}
               color="#8B5CF6"
             />
 
-            <TextInput
-              style={styles.input}
-              value={date}
-              onChangeText={setDate}
-              placeholder="2025-12-25"
-              placeholderTextColor="#697086"
-              keyboardType="numbers-and-punctuation"
-              maxLength={10}
-              autoCorrect={false}
-            />
-          </View>
+            <Text style={[styles.input, !date && styles.inputPlaceholder]}>
+              {date || "Select a date"}
+            </Text>
+
+            <Ionicons name="chevron-down" size={18} color="#697086" />
+          </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.exploreButton}
@@ -346,6 +418,46 @@ export default function ExploreScreen() {
           </View>
         )}
       </ScrollView>
+
+      <Modal
+        visible={calendarVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setCalendarVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.calendarCard}>
+            <View style={styles.calendarHeader}>
+              <TouchableOpacity onPress={() => changeMonth(-1)} style={styles.calendarNav}>
+                <Ionicons name="chevron-back" size={22} color="#FFFFFF" />
+              </TouchableOpacity>
+
+              <Text style={styles.calendarTitle}>
+                {monthNames[calendarMonth.getMonth()]} {calendarMonth.getFullYear()}
+              </Text>
+
+              <TouchableOpacity onPress={() => changeMonth(1)} style={styles.calendarNav}>
+                <Ionicons name="chevron-forward" size={22} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.weekRow}>
+              {["S", "M", "T", "W", "T", "F", "S"].map((day, index) => (
+                <Text key={`${day}-${index}`} style={styles.weekDay}>{day}</Text>
+              ))}
+            </View>
+
+            <View style={styles.calendarGrid}>{renderCalendarDays()}</View>
+
+            <TouchableOpacity
+              style={styles.calendarCancel}
+              onPress={() => setCalendarVisible(false)}
+            >
+              <Text style={styles.calendarCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -425,6 +537,10 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 16,
     marginLeft: 11,
+  },
+
+  inputPlaceholder: {
+    color: "#697086",
   },
 
   exploreButton: {
@@ -607,5 +723,105 @@ const styles = StyleSheet.create({
 
   favoriteTextActive: {
     color: "#FF7A9C",
+  },
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.72)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+
+  calendarCard: {
+    width: "100%",
+    maxWidth: 380,
+    backgroundColor: "#11182A",
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#202A40",
+    padding: 18,
+  },
+
+  calendarHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 16,
+  },
+
+  calendarNav: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: "#171F33",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  calendarTitle: {
+    color: "#FFFFFF",
+    fontSize: 17,
+    fontWeight: "700",
+  },
+
+  weekRow: {
+    flexDirection: "row",
+    marginBottom: 6,
+  },
+
+  weekDay: {
+    width: "14.2857%",
+    textAlign: "center",
+    color: "#697086",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+
+  calendarGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+  },
+
+  calendarDay: {
+    width: "14.2857%",
+    height: 42,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 10,
+  },
+
+  calendarDaySelected: {
+    backgroundColor: "#6D28D9",
+  },
+
+  calendarDayText: {
+    color: "#E5E7EB",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+
+  calendarDayDisabled: {
+    color: "#3F4658",
+  },
+
+  calendarDayTextSelected: {
+    color: "#FFFFFF",
+    fontWeight: "800",
+  },
+
+  calendarCancel: {
+    height: 46,
+    marginTop: 14,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#171F33",
+  },
+
+  calendarCancelText: {
+    color: "#A78BFA",
+    fontSize: 14,
+    fontWeight: "700",
   },
 });

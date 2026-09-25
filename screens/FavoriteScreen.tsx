@@ -1,5 +1,5 @@
 import React, {
-  useEffect,
+  useCallback,
   useState,
 } from "react";
 
@@ -15,6 +15,7 @@ import {
 } from "react-native";
 
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { useFocusEffect } from "@react-navigation/native";
 
 import { Apod } from "../services/nasaApi";
 
@@ -48,9 +49,11 @@ export default function FavoritesScreen() {
     }
   }
 
-  useEffect(() => {
-    loadFavorites();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      loadFavorites();
+    }, [])
+  );
 
   function handleRemove(item: Apod) {
     Alert.alert(
