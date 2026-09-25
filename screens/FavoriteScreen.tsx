@@ -1,177 +1,71 @@
-import React, {
-  useCallback,
-  useState,
-} from "react";
-
-import {
-  View,
-  Text,
-  Image,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  Alert,
-  ActivityIndicator,
-} from "react-native";
-
+import React, { useCallback, useState, } from "react";
+import { View, Text, Image, StyleSheet, FlatList, TouchableOpacity, Alert, ActivityIndicator, } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useFocusEffect } from "@react-navigation/native";
-
 import { Apod } from "../services/nasaApi";
-
-import {
-  getFavorites,
-  removeFavorite,
-} from "../storage/favorites";
+import { getFavorites, removeFavorite, } from "../storage/favorites";
 
 export default function FavoritesScreen() {
-  const [favorites, setFavorites] =
-    useState<Apod[]>([]);
-
-  const [loading, setLoading] =
-    useState(true);
-
+  const [favorites, setFavorites] = useState<Apod[]>([]);
+  const [loading, setLoading] = useState(true);
   async function loadFavorites() {
     try {
       setLoading(true);
-
-      const savedFavorites =
-        await getFavorites();
-
+      const savedFavorites = await getFavorites();
       setFavorites(savedFavorites);
     } catch (error) {
-      console.log(
-        "Error loading favorites:",
-        error
+      console.log("Error loading favorites:", error
       );
     } finally {
       setLoading(false);
     }
   }
 
-  useFocusEffect(
-    useCallback(() => {
-      loadFavorites();
-    }, [])
+  useFocusEffect(useCallback(() => { loadFavorites(); }, [])
   );
 
   function handleRemove(item: Apod) {
-    Alert.alert(
-      "Remove favorite",
-      `Do you want to remove "${item.title}" from your favorites?`,
+    Alert.alert("Remove favorite", `Do you want to remove "${item.title}" from your favorites?`,
       [
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
-        {
-          text: "Remove",
-          style: "destructive",
-
+        { text: "Cancel", style: "cancel", },
+        { text: "Remove", style: "destructive",
           onPress: async () => {
             await removeFavorite(item.date);
-
-            setFavorites(
-              (currentFavorites) =>
-                currentFavorites.filter(
-                  (favorite) =>
-                    favorite.date !==
-                    item.date
-                )
-            );
-          },
+            setFavorites((currentFavorites) => currentFavorites.filter((favorite) => favorite.date !== item.date));
+         },
         },
       ]
     );
   }
 
   function formatDate(value: string) {
-    const [year, month, day] =
-      value.split("-");
-
+    const [year, month, day] = value.split("-");
     return `${day}/${month}/${year}`;
   }
 
-  function renderFavorite({
-    item,
-  }: {
-    item: Apod;
-  }) {
+  function renderFavorite({ item, }: { item: Apod; }) {
     return (
       <View style={styles.card}>
-        {item.media_type === "image" ? (
-          <Image
-            source={{ uri: item.url }}
-            style={styles.image}
-            resizeMode="cover"
-          />
+        {item.media_type === "image" ? (<Image source={{ uri: item.url }} style={styles.image} resizeMode="cover" />
         ) : (
-          <View
-            style={styles.videoContainer}
-          >
-            <Ionicons
-              name="videocam-outline"
-              size={45}
-              color="#8B5CF6"
-            />
-
-            <Text style={styles.videoText}>
-              Video content
-            </Text>
+          <View style={styles.videoContainer} >
+            <Ionicons name="videocam-outline" size={45} color="#8B5CF6" />
+            <Text style={styles.videoText}> Video content </Text>
           </View>
         )}
-
         <View style={styles.cardContent}>
           <View style={styles.titleRow}>
-            <Ionicons
-              name="planet-outline"
-              size={20}
-              color="#A78BFA"
-            />
-
-            <Text
-              style={styles.cardTitle}
-              numberOfLines={2}
-            >
-              {item.title}
-            </Text>
+            <Ionicons name="planet-outline" size={20} color="#A78BFA" />
+            <Text style={styles.cardTitle} numberOfLines={2} > {item.title} </Text>
           </View>
-
           <View style={styles.dateRow}>
-            <Ionicons
-              name="calendar-outline"
-              size={15}
-              color="#8B5CF6"
-            />
-
-            <Text style={styles.date}>
-              {formatDate(item.date)}
-            </Text>
+            <Ionicons name="calendar-outline" size={15} color="#8B5CF6" />
+            <Text style={styles.date}> {formatDate(item.date)} </Text>
           </View>
-
-          <Text
-            style={styles.description}
-            numberOfLines={4}
-          >
-            {item.explanation}
-          </Text>
-
-          <TouchableOpacity
-            style={styles.removeButton}
-            onPress={() =>
-              handleRemove(item)
-            }
-            activeOpacity={0.7}
-          >
-            <Ionicons
-              name="heart"
-              size={19}
-              color="#FF6B8A"
-            />
-
-            <Text style={styles.removeText}>
-              Remove Favorite
-            </Text>
+          <Text style={styles.description} numberOfLines={4} > {item.explanation} </Text>
+          <TouchableOpacity style={styles.removeButton} onPress={() => handleRemove(item)} activeOpacity={0.7} >
+            <Ionicons name="heart" size={19} color="#FF6B8A" />
+            <Text style={styles.removeText}>  Remove Favorite </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -180,17 +74,9 @@ export default function FavoritesScreen() {
 
   if (loading) {
     return (
-      <View
-        style={styles.loadingContainer}
-      >
-        <ActivityIndicator
-          size="large"
-          color="#8B5CF6"
-        />
-
-        <Text style={styles.loadingText}>
-          Loading favorites...
-        </Text>
+      <View style={styles.loadingContainer} >
+        <ActivityIndicator size="large" color="#8B5CF6" />
+        <Text style={styles.loadingText}>  Loading favorites... </Text>
       </View>
     );
   }
@@ -199,64 +85,23 @@ export default function FavoritesScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerIcon}>
-          <Ionicons
-            name="heart"
-            size={27}
-            color="#FF6B8A"
-          />
+          <Ionicons name="heart" size={27} color="#FF6B8A" />
         </View>
-
-        <View
-          style={
-            styles.headerTextContainer
-          }
-        >
-          <Text style={styles.title}>
-            My Favorites
-          </Text>
-
-          <Text style={styles.subtitle}>
-            Your discoveries across the universe
-          </Text>
+        <View style={styles.headerTextContainer}>
+          <Text style={styles.title}>  My Favorites </Text>
+          <Text style={styles.subtitle}> Your discoveries across the universe </Text>
         </View>
       </View>
-
-      {favorites.length === 0 ? (
-        <View
-          style={styles.emptyContainer}
-        >
-          <View style={styles.emptyIcon}>
-            <Ionicons
-              name="planet-outline"
-              size={58}
-              color="#8B5CF6"
-            />
-          </View>
-
-          <Text style={styles.emptyTitle}>
-            No favorites yet
-          </Text>
-
-          <Text style={styles.emptyText}>
-            Explore NASA images and tap
-            the heart to save your
-            favorites.
-          </Text>
+      {favorites.length === 0 ? (<View style={styles.emptyContainer} >
+        <View style={styles.emptyIcon}>
+          <Ionicons name="planet-outline" size={58} color="#8B5CF6" />
         </View>
+        <Text style={styles.emptyTitle}> No favorites yet</Text>
+        <Text style={styles.emptyText}> Explore NASA images and tap the heart to save your favorites.</Text>
+      </View>
       ) : (
-        <FlatList
-          data={favorites}
-          keyExtractor={(item) =>
-            item.date
-          }
-          renderItem={renderFavorite}
-          showsVerticalScrollIndicator={
-            false
-          }
-          contentContainerStyle={
-            styles.list
-          }
-        />
+        <FlatList data={favorites} keyExtractor={(item) => item.date} renderItem={renderFavorite} showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.list} />
       )}
     </View>
   );
