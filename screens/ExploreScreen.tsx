@@ -1,157 +1,40 @@
 import React, { useState } from "react"
-import {View,Text,TouchableOpacity,Image,StyleSheet,ScrollView,ActivityIndicator,Alert,KeyboardAvoidingView,Platform,Linking,Modal} from "react-native"
+import {ActivityIndicator,Alert,Image,Linking,Platform,ScrollView,StyleSheet,Text,TouchableOpacity,View} from "react-native"
 import Ionicons from "@expo/vector-icons/Ionicons"
+import DateTimePicker from "@react-native-community/datetimepicker"
 import { Apod, getApodByDate } from "../services/nasaApi"
 import { isFavorite, toggleFavorite } from "../storage/favorites"
 
 export default function ExploreScreen() {
     const [date, setDate] = useState("")
+    const [pickerDate, setPickerDate] = useState(new Date())
+    const [showPicker, setShowPicker] = useState(false)
     const [apod, setApod] = useState<Apod | null>(null)
     const [loading, setLoading] = useState(false)
     const [favorite, setFavorite] = useState(false)
-    const [calendarVisible, setCalendarVisible] = useState(false)
-    const [showMonthPicker, setShowMonthPicker] = useState(false)
-    const [showYearPicker, setShowYearPicker] = useState(false)
 
-    const [calendarMonth, setCalendarMonth] = useState(() => {
-        const today = new Date()
-        return new Date(today.getFullYear(), today.getMonth(), 1)
-    })
-
-    const monthNames = [
-        "January", "February", "March", "April", "May", "June",
-        "July", "August", "September", "October", "November", "December"
-    ]
-
-    const years = Array.from(
-        { length: new Date().getFullYear() - 1995 + 1 },
-        (_, index) => new Date().getFullYear() - index
-    )
-
-    function formatDateForApi(year: number, month: number, day: number) {
-        return `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
+    function apiDate(value: Date) {
+        const year = value.getFullYear()
+        const month = String(value.getMonth() + 1).padStart(2, "0")
+        const day = String(value.getDate()).padStart(2, "0")
+        return `${year}-${month}-${day}`
     }
 
     function formatDate(value: string) {
-        const [year, month, day] = value.split("-")
-        return `${day}/${month}/${year}`
-    }
-
-    function openCalendar() {
-        if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-            const [year, month] = date.split("-").map(Number)
-            setCalendarMonth(new Date(year, month - 1, 1))
-        }
-
-        setShowMonthPicker(false)
-        setShowYearPicker(false)
-        setCalendarVisible(true)
-    }
-
-    function closeCalendar() {
-        setShowMonthPicker(false)
-        setShowYearPicker(false)
-        setCalendarVisible(false)
-    }
-
-    function selectCalendarDay(day: number) {
-        const year = calendarMonth.getFullYear()
-        const month = calendarMonth.getMonth()
-
-        setDate(formatDateForApi(year, month, day))
-        closeCalendar()
-    }
-
-    function selectMonth(month: number) {
-        const year = calendarMonth.getFullYear()
-        setCalendarMonth(new Date(year, month, 1))
-        setShowMonthPicker(false)
-    }
-
-    function selectYear(year: number) {
-        const currentMonth = calendarMonth.getMonth()
-        const today = new Date()
-
-        const month =
-            year === today.getFullYear() && currentMonth > today.getMonth()
-                ? today.getMonth()
-                : currentMonth
-
-        setCalendarMonth(new Date(year, month, 1))
-        setShowYearPicker(false)
-    }
-
-    function renderCalendarDays() {
-        const year = calendarMonth.getFullYear()
-        const month = calendarMonth.getMonth()
-        const firstWeekday = new Date(year, month, 1).getDay()
-        const daysInMonth = new Date(year, month + 1, 0).getDate()
-        const today = new Date()
-        const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate())
-        const apodStartDate = new Date(1995, 5, 16)
-        const cells = []
-
-        for (let i = 0; i < firstWeekday; i++) {
-            cells.push(
-                <View
-                    key={`empty-${i}`}
-                    style={styles.calendarDay}
-                />
-            )
-        }
-
-        for (let day = 1; day <= daysInMonth; day++) {
-            const current = new Date(year, month, day)
-            const future = current > todayOnly
-            const beforeApod = current < apodStartDate
-            const disabled = future || beforeApod
-            const value = formatDateForApi(year, month, day)
-            const selected = date === value
-
-            cells.push(
-                <TouchableOpacity
-                    key={day}
-                    style={[
-                        styles.calendarDay,
-                        selected && styles.calendarDaySelected
-                    ]}
-                    onPress={() => selectCalendarDay(day)}
-                    disabled={disabled}
-                >
-                    <Text
-                        style={[
-                            styles.calendarDayText,
-                            disabled && styles.calendarDayDisabled,
-                            selected && styles.calendarDayTextSelected
-                        ]}
-                    >
-                        {day}
-                    </Text>
-                </TouchableOpacity>
-            )
-        }
-
-        return cells
+        return value.split("-").reverse().join("/")
     }
 
     async function handleExplore() {
-        if (!date.trim()) {
-            Alert.alert("Date required", "Choose a date first.")
-            return
-        }
+        if (!date) return Alert.alert("Date required", "Choose a date first.")
 
         try {
             setLoading(true)
             setApod(null)
 
             const result = await getApodByDate(date)
-
             setApod(result)
-
-            const saved = await isFavorite(result.date)
-            setFavorite(saved)
-        } catch (error) {
-            console.log("Error fetching APOD:", error)
+            setFavorite(await isFavorite(result.date))
+        } catch {
             Alert.alert("Error", "Could not find a NASA APOD for this date.")
         } finally {
             setLoading(false)
@@ -160,49 +43,22 @@ export default function ExploreScreen() {
 
     async function handleFavorite() {
         if (!apod) return
-
-        try {
-            const newStatus = await toggleFavorite(apod)
-            setFavorite(newStatus)
-        } catch (error) {
-            console.log("Error updating favorite:", error)
-            Alert.alert("Error", "Could not update your favorites.")
-        }
+        setFavorite(await toggleFavorite(apod))
     }
 
     async function handleWatchVideo() {
-        if (!apod?.url) return
-
-        try {
-            const supported = await Linking.canOpenURL(apod.url)
-
-            if (supported) {
-                await Linking.openURL(apod.url)
-            } else {
-                Alert.alert("Error", "This video URL cannot be opened.")
-            }
-        } catch (error) {
-            console.log("Error opening video:", error)
-            Alert.alert("Error", "Could not open this video.")
-        }
+        if (apod?.url) await Linking.openURL(apod.url)
     }
 
     return (
-        <KeyboardAvoidingView
-            style={styles.container}
-            behavior={Platform.OS === "ios" ? "padding" : undefined}
-        >
-            <ScrollView
-                contentContainerStyle={styles.content}
-                showsVerticalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled"
-            >
+        <View style={styles.container}>
+            <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
                 <View style={styles.header}>
                     <View style={styles.headerIcon}>
                         <Ionicons name="telescope-outline" size={30} color="#A78BFA" />
                     </View>
 
-                    <View style={styles.headerText}>
+                    <View>
                         <Text style={styles.title}>Explore the Universe</Text>
                         <Text style={styles.subtitle}>Discover the universe through time</Text>
                     </View>
@@ -211,117 +67,91 @@ export default function ExploreScreen() {
                 <View style={styles.searchCard}>
                     <Text style={styles.label}>Choose a date</Text>
 
-                    <TouchableOpacity
-                        style={styles.inputContainer}
-                        onPress={openCalendar}
-                    >
+                    <TouchableOpacity style={styles.input} onPress={() => setShowPicker(true)}>
                         <Ionicons name="calendar-outline" size={21} color="#8B5CF6" />
 
-                        <Text style={[styles.input, !date && styles.inputPlaceholder]}>
+                        <Text style={[styles.inputText, !date && styles.placeholder]}>
                             {date ? formatDate(date) : "Select a date"}
                         </Text>
 
                         <Ionicons name="chevron-down" size={18} color="#697086" />
                     </TouchableOpacity>
 
-                    <TouchableOpacity
-                        style={styles.exploreButton}
-                        onPress={handleExplore}
-                    >
-                        <Ionicons name="search-outline" size={20} color="#FFFFFF" />
+                    <TouchableOpacity style={styles.exploreButton} onPress={handleExplore}>
+                        <Ionicons name="search-outline" size={20} color="#FFF" />
                         <Text style={styles.exploreButtonText}>Explore</Text>
                     </TouchableOpacity>
                 </View>
 
+                {showPicker && (
+                    <DateTimePicker
+                        value={pickerDate}
+                        mode="date"
+                        display={Platform.OS === "ios" ? "spinner" : "default"}
+                        minimumDate={new Date(1995, 5, 16)}
+                        maximumDate={new Date()}
+                        onChange={(event, selectedDate) => {
+                            if (Platform.OS === "android") setShowPicker(false)
+                            if (!selectedDate) return
+
+                            setPickerDate(selectedDate)
+                            setDate(apiDate(selectedDate))
+                        }}
+                    />
+                )}
+
+                {showPicker && Platform.OS === "ios" && (
+                    <TouchableOpacity style={styles.doneButton} onPress={() => setShowPicker(false)}>
+                        <Text style={styles.doneText}>Done</Text>
+                    </TouchableOpacity>
+                )}
+
                 {loading && (
-                    <View style={styles.loadingContainer}>
+                    <View style={styles.loading}>
                         <ActivityIndicator size="large" color="#8B5CF6" />
                         <Text style={styles.loadingText}>Exploring the universe...</Text>
                     </View>
                 )}
 
                 {apod && !loading && (
-                    <View style={styles.resultCard}>
-                        <View style={styles.resultHeader}>
-                            <Text style={styles.resultLabel}>
-                                ASTRONOMY PICTURE OF THE DAY
-                            </Text>
-
-                            <View style={styles.dateRow}>
-                                <Ionicons name="calendar-outline" size={15} color="#8C93A8" />
-                                <Text style={styles.resultDate}>{formatDate(apod.date)}</Text>
-                            </View>
+                    <View style={styles.card}>
+                        <View style={styles.cardHeader}>
+                            <Text style={styles.resultLabel}>ASTRONOMY PICTURE OF THE DAY</Text>
+                            <Text style={styles.date}>{formatDate(apod.date)}</Text>
                         </View>
 
                         {apod.media_type === "image" ? (
-                            <Image
-                                source={{ uri: apod.url }}
-                                style={styles.image}
-                                resizeMode="cover"
-                            />
+                            <Image source={{ uri: apod.url }} style={styles.image} />
                         ) : (
-                            <View style={styles.videoPlaceholder}>
-                                <View style={styles.videoIconContainer}>
-                                    <Ionicons name="play" size={34} color="#FFFFFF" />
-                                </View>
-
+                            <View style={styles.video}>
+                                <Ionicons name="play-circle-outline" size={55} color="#A78BFA" />
                                 <Text style={styles.videoTitle}>NASA Video</Text>
 
-                                <Text style={styles.videoText}>
-                                    The Astronomy Picture of the Day for this date is a video.
-                                </Text>
-
-                                <TouchableOpacity
-                                    style={styles.watchButton}
-                                    onPress={handleWatchVideo}
-                                >
-                                    <Ionicons name="play-circle-outline" size={21} color="#FFFFFF" />
+                                <TouchableOpacity style={styles.watchButton} onPress={handleWatchVideo}>
                                     <Text style={styles.watchButtonText}>Watch Video</Text>
                                 </TouchableOpacity>
                             </View>
                         )}
 
-                        <View style={styles.resultContent}>
-                            <View style={styles.apodTitleRow}>
-                                <Ionicons
-                                    name={apod.media_type === "video" ? "videocam-outline" : "planet-outline"}
-                                    size={22}
-                                    color="#A78BFA"
-                                />
-
-                                <Text style={styles.apodTitle}>{apod.title}</Text>
-                            </View>
-
-                            <Text style={styles.description}>
-                                {apod.explanation}
-                            </Text>
+                        <View style={styles.cardContent}>
+                            <Text style={styles.apodTitle}>{apod.title}</Text>
+                            <Text style={styles.description}>{apod.explanation}</Text>
 
                             {apod.copyright && (
-                                <View style={styles.copyrightRow}>
-                                    <Ionicons name="person-outline" size={15} color="#697086" />
-                                    <Text style={styles.copyright}>{apod.copyright}</Text>
-                                </View>
+                                <Text style={styles.copyright}>© {apod.copyright}</Text>
                             )}
 
                             <TouchableOpacity
-                                style={[
-                                    styles.favoriteButton,
-                                    favorite && styles.favoriteButtonActive
-                                ]}
+                                style={[styles.favoriteButton, favorite && styles.favoriteActive]}
                                 onPress={handleFavorite}
                             >
                                 <Ionicons
                                     name={favorite ? "heart" : "heart-outline"}
-                                    size={22}
+                                    size={21}
                                     color={favorite ? "#FF6B8A" : "#A78BFA"}
                                 />
 
-                                <Text
-                                    style={[
-                                        styles.favoriteText,
-                                        favorite && styles.favoriteTextActive
-                                    ]}
-                                >
+                                <Text style={styles.favoriteText}>
                                     {favorite ? "Remove from Favorites" : "Add to Favorites"}
                                 </Text>
                             </TouchableOpacity>
@@ -329,147 +159,7 @@ export default function ExploreScreen() {
                     </View>
                 )}
             </ScrollView>
-
-            <Modal
-                visible={calendarVisible}
-                transparent
-                animationType="fade"
-                onRequestClose={closeCalendar}
-            >
-                <View style={styles.modalOverlay}>
-                    <View style={styles.calendarCard}>
-                        <View style={styles.calendarHeader}>
-                            <TouchableOpacity
-                                style={styles.calendarSelect}
-                                onPress={() => {
-                                    setShowYearPicker(false)
-                                    setShowMonthPicker(true)
-                                }}
-                            >
-                                <Text style={styles.calendarSelectText}>
-                                    {monthNames[calendarMonth.getMonth()]}
-                                </Text>
-
-                                <Ionicons name="chevron-down" size={16} color="#A78BFA" />
-                            </TouchableOpacity>
-
-                            <TouchableOpacity
-                                style={styles.calendarSelect}
-                                onPress={() => {
-                                    setShowMonthPicker(false)
-                                    setShowYearPicker(true)
-                                }}
-                            >
-                                <Text style={styles.calendarSelectText}>
-                                    {calendarMonth.getFullYear()}
-                                </Text>
-
-                                <Ionicons name="chevron-down" size={16} color="#A78BFA" />
-                            </TouchableOpacity>
-                        </View>
-
-                        <View style={styles.weekRow}>
-                            {["S", "M", "T", "W", "T", "F", "S"].map((day, index) => (
-                                <Text
-                                    key={`${day}-${index}`}
-                                    style={styles.weekDay}
-                                >
-                                    {day}
-                                </Text>
-                            ))}
-                        </View>
-
-                        <View style={styles.calendarGrid}>
-                            {renderCalendarDays()}
-                        </View>
-
-                        <TouchableOpacity
-                            style={styles.calendarCancel}
-                            onPress={closeCalendar}
-                        >
-                            <Text style={styles.calendarCancelText}>Cancel</Text>
-                        </TouchableOpacity>
-
-                        {showMonthPicker && (
-                            <View style={styles.pickerOverlay}>
-                                <View style={styles.pickerHeader}>
-                                    <Text style={styles.pickerTitle}>Choose month</Text>
-
-                                    <TouchableOpacity onPress={() => setShowMonthPicker(false)}>
-                                        <Ionicons name="close" size={24} color="#FFFFFF" />
-                                    </TouchableOpacity>
-                                </View>
-
-                                <View style={styles.monthGrid}>
-                                    {monthNames.map((month, index) => {
-                                        const today = new Date()
-
-                                        const disabled =
-                                            calendarMonth.getFullYear() === today.getFullYear() &&
-                                            index > today.getMonth()
-
-                                        return (
-                                            <TouchableOpacity
-                                                key={month}
-                                                style={[
-                                                    styles.monthOption,
-                                                    calendarMonth.getMonth() === index &&
-                                                    styles.pickerOptionSelected
-                                                ]}
-                                                disabled={disabled}
-                                                onPress={() => selectMonth(index)}
-                                            >
-                                                <Text
-                                                    style={[
-                                                        styles.pickerOptionText,
-                                                        disabled && styles.pickerOptionDisabled
-                                                    ]}
-                                                >
-                                                    {month.substring(0, 3)}
-                                                </Text>
-                                            </TouchableOpacity>
-                                        )
-                                    })}
-                                </View>
-                            </View>
-                        )}
-
-                        {showYearPicker && (
-                            <View style={styles.pickerOverlay}>
-                                <View style={styles.pickerHeader}>
-                                    <Text style={styles.pickerTitle}>Choose year</Text>
-
-                                    <TouchableOpacity onPress={() => setShowYearPicker(false)}>
-                                        <Ionicons name="close" size={24} color="#FFFFFF" />
-                                    </TouchableOpacity>
-                                </View>
-
-                                <ScrollView
-                                    style={styles.yearList}
-                                    showsVerticalScrollIndicator={false}
-                                >
-                                    {years.map(year => (
-                                        <TouchableOpacity
-                                            key={year}
-                                            style={[
-                                                styles.yearOption,
-                                                calendarMonth.getFullYear() === year &&
-                                                styles.pickerOptionSelected
-                                            ]}
-                                            onPress={() => selectYear(year)}
-                                        >
-                                            <Text style={styles.pickerOptionText}>
-                                                {year}
-                                            </Text>
-                                        </TouchableOpacity>
-                                    ))}
-                                </ScrollView>
-                            </View>
-                        )}
-                    </View>
-                </View>
-            </Modal>
-        </KeyboardAvoidingView>
+        </View>
     )
 }
 
@@ -497,11 +187,8 @@ const styles = StyleSheet.create({
         alignItems: "center",
         marginRight: 13
     },
-    headerText: {
-        flex: 1
-    },
     title: {
-        color: "#FFFFFF",
+        color: "#FFF",
         fontSize: 25,
         fontWeight: "800"
     },
@@ -518,12 +205,12 @@ const styles = StyleSheet.create({
         borderColor: "#202A40"
     },
     label: {
-        color: "#FFFFFF",
+        color: "#FFF",
         fontSize: 15,
         fontWeight: "600",
         marginBottom: 10
     },
-    inputContainer: {
+    input: {
         height: 55,
         backgroundColor: "#090E1B",
         borderRadius: 14,
@@ -533,48 +220,56 @@ const styles = StyleSheet.create({
         alignItems: "center",
         paddingHorizontal: 15
     },
-    input: {
+    inputText: {
         flex: 1,
-        color: "#FFFFFF",
+        color: "#FFF",
         fontSize: 16,
         marginLeft: 11
     },
-    inputPlaceholder: {
+    placeholder: {
         color: "#697086"
     },
     exploreButton: {
         height: 54,
         backgroundColor: "#6D28D9",
         borderRadius: 14,
-        alignItems: "center",
-        justifyContent: "center",
         marginTop: 15,
         flexDirection: "row",
+        justifyContent: "center",
+        alignItems: "center",
         gap: 8
     },
     exploreButtonText: {
-        color: "#FFFFFF",
-        fontSize: 16,
+        color: "#FFF",
         fontWeight: "700"
     },
-    loadingContainer: {
+    doneButton: {
+        height: 45,
+        backgroundColor: "#6D28D9",
+        borderRadius: 12,
+        justifyContent: "center",
+        alignItems: "center",
+        marginTop: 10
+    },
+    doneText: {
+        color: "#FFF",
+        fontWeight: "700"
+    },
+    loading: {
         alignItems: "center",
         marginTop: 50
     },
     loadingText: {
         color: "#A5AABD",
-        marginTop: 12,
-        fontSize: 14
+        marginTop: 12
     },
-    resultCard: {
+    card: {
         backgroundColor: "#11182A",
-        borderRadius: 22,
+        borderRadius: 20,
         marginTop: 25,
-        overflow: "hidden",
-        borderWidth: 1,
-        borderColor: "#202A40"
+        overflow: "hidden"
     },
-    resultHeader: {
+    cardHeader: {
         padding: 18
     },
     resultLabel: {
@@ -583,80 +278,45 @@ const styles = StyleSheet.create({
         fontWeight: "800",
         letterSpacing: 1
     },
-    dateRow: {
-        flexDirection: "row",
-        alignItems: "center",
-        marginTop: 8
-    },
-    resultDate: {
+    date: {
         color: "#A5AABD",
-        marginLeft: 6,
-        fontSize: 13
+        fontSize: 13,
+        marginTop: 7
     },
     image: {
         width: "100%",
-        height: 260,
-        backgroundColor: "#090E1B"
+        height: 260
     },
-    videoPlaceholder: {
-        minHeight: 270,
+    video: {
+        height: 250,
         backgroundColor: "#090E1B",
-        justifyContent: "center",
         alignItems: "center",
-        padding: 25
-    },
-    videoIconContainer: {
-        width: 72,
-        height: 72,
-        borderRadius: 36,
-        backgroundColor: "#6D28D9",
-        justifyContent: "center",
-        alignItems: "center"
+        justifyContent: "center"
     },
     videoTitle: {
-        color: "#FFFFFF",
-        fontSize: 19,
-        fontWeight: "800",
-        marginTop: 15
-    },
-    videoText: {
-        color: "#A5AABD",
-        fontSize: 13,
-        textAlign: "center",
-        lineHeight: 19,
-        marginTop: 7,
-        maxWidth: 280
+        color: "#FFF",
+        fontSize: 18,
+        fontWeight: "700",
+        marginTop: 10
     },
     watchButton: {
-        height: 48,
-        paddingHorizontal: 22,
         backgroundColor: "#6D28D9",
-        borderRadius: 14,
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 8,
-        marginTop: 18
+        paddingHorizontal: 20,
+        paddingVertical: 12,
+        borderRadius: 12,
+        marginTop: 15
     },
     watchButtonText: {
-        color: "#FFFFFF",
-        fontSize: 14,
+        color: "#FFF",
         fontWeight: "700"
     },
-    resultContent: {
+    cardContent: {
         padding: 18
     },
-    apodTitleRow: {
-        flexDirection: "row",
-        alignItems: "flex-start"
-    },
     apodTitle: {
-        flex: 1,
-        color: "#FFFFFF",
+        color: "#FFF",
         fontSize: 21,
-        fontWeight: "800",
-        lineHeight: 28,
-        marginLeft: 9
+        fontWeight: "800"
     },
     description: {
         color: "#A5AABD",
@@ -664,16 +324,10 @@ const styles = StyleSheet.create({
         lineHeight: 22,
         marginTop: 14
     },
-    copyrightRow: {
-        flexDirection: "row",
-        alignItems: "center",
-        marginTop: 15
-    },
     copyright: {
         color: "#697086",
         fontSize: 12,
-        marginLeft: 6,
-        flex: 1
+        marginTop: 15
     },
     favoriteButton: {
         height: 52,
@@ -686,158 +340,11 @@ const styles = StyleSheet.create({
         alignItems: "center",
         gap: 8
     },
-    favoriteButtonActive: {
-        backgroundColor: "#29143A",
+    favoriteActive: {
         borderColor: "#EF476F"
     },
     favoriteText: {
         color: "#A78BFA",
-        fontSize: 15,
         fontWeight: "700"
-    },
-    favoriteTextActive: {
-        color: "#FF7A9C"
-    },
-    modalOverlay: {
-        flex: 1,
-        backgroundColor: "rgba(0, 0, 0, 0.72)",
-        justifyContent: "center",
-        alignItems: "center",
-        padding: 20
-    },
-    calendarCard: {
-        width: "100%",
-        maxWidth: 380,
-        backgroundColor: "#11182A",
-        borderRadius: 20,
-        borderWidth: 1,
-        borderColor: "#202A40",
-        padding: 18,
-        overflow: "hidden"
-    },
-    calendarHeader: {
-        flexDirection: "row",
-        marginBottom: 20,
-        gap: 10
-    },
-    calendarSelect: {
-        flex: 1,
-        height: 48,
-        backgroundColor: "#171F33",
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: "#293249",
-        paddingHorizontal: 14,
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between"
-    },
-    calendarSelectText: {
-        color: "#FFFFFF",
-        fontSize: 15,
-        fontWeight: "700"
-    },
-    weekRow: {
-        flexDirection: "row",
-        marginBottom: 6
-    },
-    weekDay: {
-        width: "14.2857%",
-        textAlign: "center",
-        color: "#697086",
-        fontSize: 12,
-        fontWeight: "700"
-    },
-    calendarGrid: {
-        flexDirection: "row",
-        flexWrap: "wrap"
-    },
-    calendarDay: {
-        width: "14.2857%",
-        height: 42,
-        alignItems: "center",
-        justifyContent: "center",
-        borderRadius: 10
-    },
-    calendarDaySelected: {
-        backgroundColor: "#6D28D9"
-    },
-    calendarDayText: {
-        color: "#E5E7EB",
-        fontSize: 14,
-        fontWeight: "600"
-    },
-    calendarDayDisabled: {
-        color: "#3F4658"
-    },
-    calendarDayTextSelected: {
-        color: "#FFFFFF",
-        fontWeight: "800"
-    },
-    calendarCancel: {
-        height: 46,
-        marginTop: 14,
-        borderRadius: 12,
-        alignItems: "center",
-        justifyContent: "center",
-        backgroundColor: "#171F33"
-    },
-    calendarCancelText: {
-        color: "#A78BFA",
-        fontSize: 14,
-        fontWeight: "700"
-    },
-    pickerOverlay: {
-        position: "absolute",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: "#11182A",
-        padding: 18,
-        zIndex: 10
-    },
-    pickerHeader: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-        marginBottom: 16
-    },
-    pickerTitle: {
-        color: "#FFFFFF",
-        fontSize: 18,
-        fontWeight: "800"
-    },
-    monthGrid: {
-        flexDirection: "row",
-        flexWrap: "wrap"
-    },
-    monthOption: {
-        width: "33.333%",
-        height: 62,
-        alignItems: "center",
-        justifyContent: "center",
-        borderRadius: 12
-    },
-    yearList: {
-        maxHeight: 330
-    },
-    yearOption: {
-        height: 48,
-        alignItems: "center",
-        justifyContent: "center",
-        borderRadius: 12,
-        marginBottom: 4
-    },
-    pickerOptionSelected: {
-        backgroundColor: "#6D28D9"
-    },
-    pickerOptionText: {
-        color: "#FFFFFF",
-        fontSize: 15,
-        fontWeight: "700"
-    },
-    pickerOptionDisabled: {
-        color: "#3F4658"
     }
 })
