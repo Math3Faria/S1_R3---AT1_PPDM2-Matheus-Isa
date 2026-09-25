@@ -21,6 +21,7 @@ export default function ExploreScreen() {
     }
 
     function formatDate(value: string) {
+        if (!value) return ""
         return value.split("-").reverse().join("/")
     }
 
@@ -66,14 +67,9 @@ export default function ExploreScreen() {
 
                 <View style={styles.searchCard}>
                     <Text style={styles.label}>Choose a date</Text>
-
                     <TouchableOpacity style={styles.input} onPress={() => setShowPicker(true)}>
                         <Ionicons name="calendar-outline" size={21} color="#8B5CF6" />
-
-                        <Text style={[styles.inputText, !date && styles.placeholder]}>
-                            {date ? formatDate(date) : "Select a date"}
-                        </Text>
-
+                        <Text style={[styles.inputText, !date && styles.placeholder]}> {date ? formatDate(date) : "Select a date"} </Text>
                         <Ionicons name="chevron-down" size={18} color="#697086" />
                     </TouchableOpacity>
 
@@ -84,26 +80,30 @@ export default function ExploreScreen() {
                 </View>
 
                 {showPicker && (
-                    <DateTimePicker
-                        value={pickerDate}
-                        mode="date"
-                        display={Platform.OS === "ios" ? "spinner" : "default"}
-                        minimumDate={new Date(1995, 5, 16)}
-                        maximumDate={new Date()}
-                        onChange={(event, selectedDate) => {
-                            if (Platform.OS === "android") setShowPicker(false)
-                            if (!selectedDate) return
+                    <View style={styles.pickerContainer}>
+                        <DateTimePicker
+                            value={pickerDate}
+                            mode="date"
+                            display="spinner"
+                            minimumDate={new Date(1995, 5, 16)}
+                            maximumDate={new Date()}
+                            textColor="#FFFFFF"
+                            themeVariant="dark"
+                            onChange={(event, selectedDate) => {
+                                if (Platform.OS === "android") setShowPicker(false)
+                                if (!selectedDate) return
 
-                            setPickerDate(selectedDate)
-                            setDate(apiDate(selectedDate))
-                        }}
-                    />
-                )}
+                                setPickerDate(selectedDate)
+                                setDate(apiDate(selectedDate))
+                            }}
+                        />
 
-                {showPicker && Platform.OS === "ios" && (
-                    <TouchableOpacity style={styles.doneButton} onPress={() => setShowPicker(false)}>
-                        <Text style={styles.doneText}>Done</Text>
-                    </TouchableOpacity>
+                        {Platform.OS === "ios" && (
+                            <TouchableOpacity style={styles.doneButton} onPress={() => setShowPicker(false)}>
+                                <Text style={styles.doneText}>Done</Text>
+                            </TouchableOpacity>
+                        )}
+                    </View>
                 )}
 
                 {loading && (
@@ -141,15 +141,8 @@ export default function ExploreScreen() {
                                 <Text style={styles.copyright}>© {apod.copyright}</Text>
                             )}
 
-                            <TouchableOpacity
-                                style={[styles.favoriteButton, favorite && styles.favoriteActive]}
-                                onPress={handleFavorite}
-                            >
-                                <Ionicons
-                                    name={favorite ? "heart" : "heart-outline"}
-                                    size={21}
-                                    color={favorite ? "#FF6B8A" : "#A78BFA"}
-                                />
+                            <TouchableOpacity style={[styles.favoriteButton, favorite && styles.favoriteActive]} onPress={handleFavorite}>
+                                <Ionicons name={favorite ? "heart" : "heart-outline"} size={21} color={favorite ? "#FF6B8A" : "#A78BFA"} />
 
                                 <Text style={styles.favoriteText}>
                                     {favorite ? "Remove from Favorites" : "Add to Favorites"}
@@ -242,6 +235,14 @@ const styles = StyleSheet.create({
     exploreButtonText: {
         color: "#FFF",
         fontWeight: "700"
+    },
+    pickerContainer: {
+        backgroundColor: "#11182A",
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: "#202A40",
+        marginTop: 15,
+        padding: 15
     },
     doneButton: {
         height: 45,
